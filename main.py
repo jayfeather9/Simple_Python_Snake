@@ -3,10 +3,11 @@
 
 from tkinter import *
 from random import randint as rd
+from keyboard import KeyDetector
 import time
 
-WINDOW_WIDTH_NUMBER = 20
-WINDOW_HEIGHT_NUMBER = 20
+WINDOW_WIDTH_NUMBER = 40
+WINDOW_HEIGHT_NUMBER = 40
 STARTING_SNAKE_LENGTH = 3
 
 # root = Tk()
@@ -37,6 +38,10 @@ class GameMap:
         self.direction = rd(0, 3)
         self.tailDirection = self.direction
         self.directionDict = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        self.turn_dict = [[[0, 0], [0, 0], [1, 0], [1, 1]],
+                          [[0, 0], [0, 0], [1, 1], [1, 0]],
+                          [[1, 0], [1, 1], [0, 0], [0, 0]],
+                          [[1, 1], [1, 0], [0, 0], [0, 0]]]
         self.turnPointList = []
         self.other_init()
         self.update()
@@ -134,17 +139,20 @@ class GameMap:
                 pos = [rd(0, self.mapHeight - 1), rd(0, self.mapWidth - 1)]
             self.foodPos.append(pos[:])
 
+    def key_answer(self, key):
+        tran_dict = {'w': 0, 's': 1, 'd': 2, 'a': 3}
+        tmp_ans = tran_dict[key]
+        if self.turn_dict[self.direction][tmp_ans][0] == 0:
+            return
+        self.turn(self.turn_dict[self.direction][tmp_ans][1])
+
     def answer(self, event):
         tran_dict = {'Up': 0, 'Down': 1, 'Right': 2, 'Left': 3}
         tmp_ans = tran_dict[event.widget['text']]
         # turn_dict[i][j]=[0/1, 0/1] i=cur_direction j=press
-        turn_dict = [[[0, 0], [0, 0], [1, 0], [1, 1]],
-                     [[0, 0], [0, 0], [1, 1], [1, 0]],
-                     [[1, 0], [1, 1], [0, 0], [0, 0]],
-                     [[1, 1], [1, 0], [0, 0], [0, 0]]]
-        if turn_dict[self.direction][tmp_ans][0] == 0:
+        if self.turn_dict[self.direction][tmp_ans][0] == 0:
             return
-        self.turn(turn_dict[self.direction][tmp_ans][1])
+        self.turn(self.turn_dict[self.direction][tmp_ans][1])
 
 
 class MainWindow:
@@ -164,34 +172,40 @@ class MainWindow:
         self.FULL = '■'
         self.FOOD = '★'
         self.REFRESH_TIME = 100  # ms
-        self.FOOD_FREQUENCY = 3  # turn per food
+        self.FOOD_FREQUENCY = 5  # turn per food
         self.gameMap = GameMap(self, self.WINDOW_WIDTH, self.WINDOW_HEIGHT, self.FOOD_FREQUENCY, self.STARTING_SNAKE_LENGTH)
         self.gameText = ""
         self.mainLabel = Label(master=self.master, font=self.FONT)
-        self.buttonFrame = Frame(master=self.master)
-        self.buttonUp = Button(master=self.buttonFrame, text='Up', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
-        self.buttonDown = Button(master=self.buttonFrame, text='Down', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
-        self.buttonLeft = Button(master=self.buttonFrame, text='Left', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
-        self.buttonRight = Button(master=self.buttonFrame, text='Right', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
+        # self.buttonFrame = Frame(master=self.master)
+        # self.buttonUp = Button(master=self.buttonFrame, text='Up', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
+        # self.buttonDown = Button(master=self.buttonFrame, text='Down', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
+        # self.buttonLeft = Button(master=self.buttonFrame, text='Left', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
+        # self.buttonRight = Button(master=self.buttonFrame, text='Right', width=self.BUTTON_WIDTH, height=self.BUTTON_HEIGHT, font=self.FONT)
+        self.keyDetector = KeyDetector()
+        self.keyDetector.start()
         self.gameEnd = False
         self.other_init()
 
     def other_init(self):
         self.update()
         self.mainLabel.grid(row=0, column=0)
-        self.buttonFrame.grid(row=1, column=0)
-        self.buttonUp.grid(row=0, column=1)
-        self.buttonUp.bind('<Button-1>', self.gameMap.answer)
-        self.buttonDown.grid(row=2, column=1)
-        self.buttonDown.bind('<Button-1>', self.gameMap.answer)
-        self.buttonLeft.grid(row=1, column=0)
-        self.buttonLeft.bind('<Button-1>', self.gameMap.answer)
-        self.buttonRight.grid(row=1, column=2)
-        self.buttonRight.bind('<Button-1>', self.gameMap.answer)
+        # self.buttonFrame.grid(row=1, column=0)
+        # self.buttonUp.grid(row=0, column=1)
+        # self.buttonUp.bind('<Button-1>', self.gameMap.answer)
+        # self.buttonDown.grid(row=2, column=1)
+        # self.buttonDown.bind('<Button-1>', self.gameMap.answer)
+        # self.buttonLeft.grid(row=1, column=0)
+        # self.buttonLeft.bind('<Button-1>', self.gameMap.answer)
+        # self.buttonRight.grid(row=1, column=2)
+        # self.buttonRight.bind('<Button-1>', self.gameMap.answer)
         self.master.after(self.REFRESH_TIME, self.refresh)
 
     def refresh(self):
         # self.random_insert()
+        for active_key in self.keyDetector.active_key:
+            if active_key in ['w', 'a', 's', 'd']:
+                self.gameMap.key_answer(active_key)
+        self.keyDetector.clear()
         return_val = self.update()
         if return_val == -1:
             return
